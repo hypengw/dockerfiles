@@ -1,0 +1,42 @@
+FROM docker.io/ubuntu:24.04 AS build
+
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt-get update && apt-get install -y --no-install-suggests \
+    git \
+    g++ \
+    cmake \
+    ninja-build
+
+WORKDIR /workspace/llama.cpp
+RUN --mount=type=tmpfs,target=/workspace \
+    git clone https://github.com/ggerganov/llama.cpp.git /workspace/llama.cpp && \
+    . /opt/intel/oneapi/setvars.sh && \
+    cmake -B build \
+    -DCMAKE_INSTALL_PREFIX=/opt/llama.cpp \
+    -DCMAKE_C_COMPILER=icx \
+    -DCMAKE_CXX_COMPILER=icpx \
+    -GNinja \
+    -DLLAMA_BUILD_TESTS=OFF \
+    -DGGML_LTO=ON \
+    -DGGML_AVX=ON \
+    -DGGML_AVX2=ON \
+    -DGGML_SYCL=ON && \
+    cmake --build build && \
+    cmake --install build
+
+FROM docker.io/ubuntu:24.10
+ENV PATH="/opt/llama.cpp/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/opt/llama.cpp/lib"
+
+
+COPY --from=build /opt/llama.cpp /opt/llama.cpp
+RUN . /opt/intel/oneapi/setvars.sh && \
+    ldd /opt/llama.cpp/bin/llama-server | grep -oE '/opt/intel[^ ]+' | xargs -i install -D {} -t /opt/llama.cpp/lib && \
+    dir=$(dirname $OCL_ICD_FILENAMES) && ldd $dir/libur_adapter_opencl.so.0 $dir/libur_loader.so.0 | grep -oE '/opt/intel/[^ :]+' | xargs -i install -D {} -t /opt/llama.cpp/lib
+
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt-get update && \
+    apt-get install -y intel-opencl-icd libze-intel-gpu1 clinfo && \
+    rm -rf /var/lib/apt/lists/*
+
+ENTRYPOINT []

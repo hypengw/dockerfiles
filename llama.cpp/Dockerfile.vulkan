@@ -1,0 +1,39 @@
+FROM docker.io/ubuntu:24.04 AS build
+
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt-get update && apt-get install -y --no-install-suggests \
+    git \
+    g++ \
+    cmake \
+    ninja-build \
+    libvulkan-dev \
+    vulkan-tools \
+    glslc
+
+WORKDIR /workspace/llama.cpp
+RUN --mount=type=tmpfs,target=/workspace \
+    git clone https://github.com/ggerganov/llama.cpp.git /workspace/llama.cpp && \
+    cmake -B build \
+    -DCMAKE_INSTALL_PREFIX=/opt/llama.cpp \
+    -GNinja \
+    -DLLAMA_BUILD_TESTS=OFF \
+    -DGGML_LTO=ON \
+    -DGGML_AVX=ON \
+    -DGGML_AVX2=ON \
+    -DGGML_VULKAN=ON && \
+    cmake --build build && \
+    cmake --install build
+
+FROM docker.io/ubuntu:24.10
+ENV PATH="/opt/llama.cpp/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/opt/llama.cpp/lib"
+
+
+COPY --from=build /opt/llama.cpp /opt/llama.cpp
+
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt-get update && \
+    apt-get install -y libvulkan1 && \
+    rm -rf /var/lib/apt/lists/*
+
+ENTRYPOINT []
