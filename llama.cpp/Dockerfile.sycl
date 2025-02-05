@@ -30,6 +30,9 @@ RUN --mount=type=tmpfs,target=/workspace \
 FROM docker.io/ubuntu:24.10
 ENV PATH="/opt/llama.cpp/bin:${PATH}"
 ENV LD_LIBRARY_PATH="/opt/llama.cpp/lib"
+ENV SYCL_CACHE_PERSISTENT=1
+# [optional] under most circumstances, the following environment variable may improve performance, but sometimes this may also cause performance degradation
+ENV SYCL_PI_LEVEL_ZERO_USE_IMMEDIATE_COMMANDLISTS=1
 
 COPY --from=build /opt/llama.cpp /opt/llama.cpp
 RUN . /opt/intel/oneapi/setvars.sh && \

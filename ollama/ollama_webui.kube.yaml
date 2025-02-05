@@ -1,0 +1,50 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    io.containers.autoupdate: registry
+    io.podman.annotations.privileged: "FALSE"
+    io.podman.annotations.autoremove: "TRUE"
+  labels:
+    app: ollama-pod
+  name: ollama-pod
+spec:
+  containers:
+  - name: ollama
+    env:
+      - name: OLLAMA_MODELS
+        value: /models
+    image: localhost/ollama:sycl
+    imagePullPolicy: Never
+    command: ["ollama"]
+    args: ["serve"]
+    volumeMounts:
+      - mountPath: /models
+        name: ollama-models-pvc
+      - mountPath: /dev/dri
+        name: dri-devices
+
+  - name: webui
+    image: ghcr.io/open-webui/open-webui:main
+    imagePullPolicy: IfNotPresent
+    env:
+      - name: OLLAMA_BASE_URL
+        value: http://localhost:11434
+    ports:
+      - containerPort: 8080
+        hostPort: 3000
+    volumeMounts:
+      - mountPath: /app/backend/data
+        name: open-webui-pvc
+  volumes:
+    - name: open-webui-pvc
+      persistentVolumeClaim:
+        claimName: open-webui
+    - name: ollama-models-pvc
+      persistentVolumeClaim:
+        claimName: ollama-models
+    - name: dri-devices
+      hostPath:
+        path: /dev/dri
+        type: Directory
