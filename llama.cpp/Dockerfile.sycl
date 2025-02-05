@@ -37,11 +37,11 @@ ENV SYCL_PI_LEVEL_ZERO_USE_IMMEDIATE_COMMANDLISTS=1
 COPY --from=build /opt/llama.cpp /opt/llama.cpp
 RUN . /opt/intel/oneapi/setvars.sh && \
     ldd /opt/llama.cpp/bin/llama-server | grep -oE '/opt/intel[^ ]+' | xargs -i install -D {} -t /opt/llama.cpp/lib && \
-    dir=$(dirname $OCL_ICD_FILENAMES) && ldd $dir/libur_adapter_opencl.so.0 $dir/libur_loader.so.0 | grep -oE '/opt/intel/[^ :]+' | xargs -i install -D {} -t /opt/llama.cpp/lib
+    dir=$(dirname $OCL_ICD_FILENAMES) && ldd $dir/libur_adapter_opencl.so.0 $dir/libur_loader.so.0 $dir/libur_adapter_level_zero.so.? $TBBROOT/lib/libtbbmalloc.so.2 | grep -oE '/opt/intel/[^ :]+' | xargs -i install -D {} -t /opt/llama.cpp/lib
 
 RUN --mount=type=cache,target=/var/cache/apt \
     apt-get update && \
-    apt-get install -y intel-opencl-icd libze-intel-gpu1 clinfo && \
+    apt-get install -y intel-opencl-icd libze-intel-gpu1 libze1 clinfo ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
 ENTRYPOINT []

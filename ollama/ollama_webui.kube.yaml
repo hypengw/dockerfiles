@@ -15,6 +15,8 @@ spec:
     env:
       - name: OLLAMA_MODELS
         value: /models
+      - name: OLLAMA_GPU_OVERHEAD
+        value: 8192000000 # limit to 8GB
     image: localhost/ollama:sycl
     imagePullPolicy: Never
     command: ["ollama"]
@@ -22,6 +24,8 @@ spec:
     volumeMounts:
       - mountPath: /models
         name: ollama-models-pvc
+      - mountPath: /root/.ollama
+        name: ollama-data-pvc
       - mountPath: /dev/dri
         name: dri-devices
 
@@ -44,6 +48,9 @@ spec:
     - name: ollama-models-pvc
       persistentVolumeClaim:
         claimName: ollama-models
+    - name: ollama-data-pvc
+      persistentVolumeClaim:
+        claimName: ollama-data
     - name: dri-devices
       hostPath:
         path: /dev/dri

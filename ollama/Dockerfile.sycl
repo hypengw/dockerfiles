@@ -29,7 +29,6 @@ RUN --mount=type=tmpfs,target=/workspace/build --mount=type=tmpfs,target=/root/.
     . /opt/intel/oneapi/setvars.sh && \
     cmake -B build \
     -DCMAKE_INSTALL_PREFIX=/opt/ollama \
-    -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=icx \
     -DCMAKE_CXX_COMPILER=icpx \
     -GNinja \
@@ -43,29 +42,29 @@ RUN --mount=type=tmpfs,target=/workspace/build --mount=type=tmpfs,target=/root/.
     && \
     cmake --build build && \
     cmake --install build && \
-    install -Dm644 build/lib/ollama/libggml-sycl.so -t /opt/ollama/lib && \
+    install -Dm644 build/lib/ollama/libggml-sycl.so -t /opt/ollama/lib/ollama && \
     go build -trimpath -buildmode=pie -o /opt/ollama/bin/ollama
-
 
 FROM docker.io/ubuntu:24.10
 
 ARG PREFIX="/opt/ollama"
-ARG SYCL_LIBDIR="/opt/ollama/lib-sycl"
+ARG SYCL_LIBDIR="/opt/ollama/lib/sycl"
 ENV PATH="/opt/ollama/bin:${PATH}"
-ENV LD_LIBRARY_PATH="/opt/ollama/lib-sycl:/opt/ollama/lib"
+ENV LD_LIBRARY_PATH="/opt/ollama/lib/sycl:/opt/ollama/lib/ollama"
 ENV SYCL_CACHE_PERSISTENT=1
 # [optional] under most circumstances, the following environment variable may improve performance, but sometimes this may also cause performance degradation
 ENV SYCL_PI_LEVEL_ZERO_USE_IMMEDIATE_COMMANDLISTS=1
 
 COPY --from=build /opt/ollama /opt/ollama
 RUN . /opt/intel/oneapi/setvars.sh && \
-    ldd $PREFIX/lib/libggml-sycl.so | grep -oE '/opt/intel[^ ]+' | xargs -i install -D {} -t $SYCL_LIBDIR && \
-    dir=$(dirname $OCL_ICD_FILENAMES) && ldd $dir/libur_adapter_opencl.so.0 $dir/libur_loader.so.0 | grep -oE '/opt/intel/[^ :]+' | xargs -i install -D {} -t $SYCL_LIBDIR
+    ldd $PREFIX/lib/ollama/libggml-sycl.so | grep -oE '/opt/intel[^ ]+' | xargs -i install -D {} -t $SYCL_LIBDIR && \
+    dir=$(dirname $OCL_ICD_FILENAMES) && ldd $dir/libur_adapter_opencl.so.0 $dir/libur_loader.so.0 $dir/libur_adapter_level_zero.so.? $TBBROOT/lib/libtbbmalloc.so.2 | grep -oE '/opt/intel/[^ :]+' | xargs -i install -D {} -t $SYCL_LIBDIR
 
 RUN --mount=type=cache,target=/var/cache/apt \
     apt-get update && \
-    apt-get install -y intel-opencl-icd libze-intel-gpu1 clinfo ca-certificates && \
+    apt-get install -y intel-opencl-icd libze-intel-gpu1 libze1 clinfo ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
 ENV OLLAMA_INTEL_GPU=1
+ENV ZES_ENABLE_SYSMAN=1
 ENTRYPOINT ["ollama"]
