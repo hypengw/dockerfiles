@@ -16,7 +16,7 @@ spec:
       - name: OLLAMA_MODELS
         value: /models
       - name: OLLAMA_GPU_OVERHEAD
-        value: 8192000000 # limit to 8GB
+        value: 3300000000 # reverse 3GB for desktop usage
     image: localhost/ollama:sycl
     imagePullPolicy: Never
     command: ["ollama"]
@@ -37,7 +37,7 @@ spec:
         value: http://localhost:11434
     ports:
       - containerPort: 8080
-        hostPort: 3000
+        hostPort: 8077
     volumeMounts:
       - mountPath: /app/backend/data
         name: open-webui-pvc

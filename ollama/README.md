@@ -1,13 +1,13 @@
 ## build
 ```bash
-./build.sh v0.5.8-rc6
+./build.sh v0.5.11
 ```
 
 ## use
 ```bash
 podman kube play ./ollama_webui.kube.yaml --replace
 
-# open http://localhost:3000
+# open http://localhost:8077
 ```
 
 ## import model
