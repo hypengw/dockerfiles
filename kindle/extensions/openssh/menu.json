@@ -1,0 +1,24 @@
+{
+    "items": [
+        {
+            "name": "Openssh Server",
+            "items": [
+                {
+                    "name": "Start Server",
+                    "action": "sh /mnt/us/extensions/openssh/start_server.sh",
+                    "exitmenu": false
+                },
+                {
+                    "name": "Stop Server",
+                    "action": "/mnt/us/extensions/openssh/stop_server.sh",
+                    "exitmenu": false
+                },
+                {
+                    "name": "Show status",
+                    "action": "/mnt/us/extensions/openssh/show_status.sh",
+                    "exitmenu": false
+                }
+            ]
+        }
+    ]
+}

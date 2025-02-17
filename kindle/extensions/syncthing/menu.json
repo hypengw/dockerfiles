@@ -1,0 +1,24 @@
+{
+    "items": [
+        {
+            "name": "Syncthing",
+            "items": [
+                {
+                    "name": "Start Server",
+                    "action": "sh /mnt/us/extensions/syncthing/start_server.sh",
+                    "exitmenu": false
+                },
+                {
+                    "name": "Stop Server",
+                    "action": "/mnt/us/extensions/syncthing/stop_server.sh",
+                    "exitmenu": false
+                },
+                {
+                    "name": "Show status",
+                    "action": "/mnt/us/extensions/syncthing/show_status.sh",
+                    "exitmenu": false
+                }
+            ]
+        }
+    ]
+}
