@@ -1,4 +1,4 @@
-FROM --platform=linux/arm/v7 debian:jessie AS armhf-base
+FROM --platform=linux/arm/v7 debian:jessie
 
 ARG SNAPSHOT=20230304T144759Z
 RUN echo "\n\
