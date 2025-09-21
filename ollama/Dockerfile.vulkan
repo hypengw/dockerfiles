@@ -1,0 +1,76 @@
+FROM docker.io/ubuntu:25.04 AS build
+
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt-get update && apt-get install -y --no-install-suggests \
+    git \
+    g++ \
+    cmake \
+    ninja-build \
+    golang \
+    rsync \
+    libvulkan-dev \
+    vulkan-tools \
+    glslc
+
+
+ENV OLLAMA_TAG="${OLLAMA_TAG}"
+#RUN git clone https://github.com/ollama/ollama.git /workspace/ollama && \
+RUN git clone https://github.com/inforithmics/ollama.git /workspace/ollama && \
+    [ -z "$OLLAMA_TAG" ] || git -C /workspace/ollama checkout "$OLLAMA_TAG" && \
+    mkdir /workspace/build
+
+ARG GOFLAGS="'-ldflags=-w -s'"
+ENV CGO_ENABLED=1
+WORKDIR /workspace/ollama
+RUN --mount=type=tmpfs,target=/workspace/build --mount=type=tmpfs,target=/root/.cache/go-build \
+    ln -s /workspace/build ./ && \
+    sed -i 's:add_subdirectory...CMAKE_CURRENT_SOURCE_DIR./ml/backend/ggml/ggml/src/ggml-vulkan.::g' CMakeLists.txt && \
+#    sed -i -e 's/hide \*//g' -e 's/exclude \*//g'  ml/backend/ggml/ggml/.rsync-filter && \
+#    echo 'include /src/ggml-vulkan/' >> ml/backend/ggml/ggml/.rsync-filter && \
+#    echo 'include /src/ggml-vulkan/cmake' >> ml/backend/ggml/ggml/.rsync-filter && \
+#    echo 'include /src/ggml-vulkan/vulkan-shaders' >> ml/backend/ggml/ggml/.rsync-filter && \
+#    echo 'include *.comp' >> ml/backend/ggml/ggml/.rsync-filter && \
+#    echo 'include *.in' >> ml/backend/ggml/ggml/.rsync-filter && \
+#    echo 'hide *' >> ml/backend/ggml/ggml/.rsync-filter && \
+#    cat ml/backend/ggml/ggml/.rsync-filter && \
+#    make -f Makefile.sync clean apply-patches sync && \
+    cmake -B build \
+    -DCMAKE_INSTALL_PREFIX=/opt/ollama \
+    -GNinja \
+    -DLLAMA_BUILD_TESTS=OFF \
+    -DGGML_LTO=ON \
+    -DGGML_AVX=ON \
+    -DGGML_AVX2=ON \
+    -DGGML_VULKAN=ON \
+    && \
+    cmake --build build && \
+    cmake --install build && \
+    install -Dm644 build/lib/ollama/*.so -t /opt/ollama/lib/ollama && \
+    go build -trimpath -buildmode=pie -o /opt/ollama/bin/ollama
+
+FROM docker.io/ubuntu:25.04
+
+ARG PREFIX="/opt/ollama"
+ENV PATH="/opt/ollama/bin:${PATH}"
+
+COPY --from=build /opt/ollama /opt/ollama
+
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt-get update && \
+    apt-get install -y ca-certificates libvulkan1 libgomp1 curl vulkan-tools libegl1 libxext6 && \
+    rm -rf /var/lib/apt/lists/*
+#    apt-get install -y intel-opencl-icd libze-intel-gpu1 libze1 clinfo && \
+
+RUN mkdir -p /usr/share/glvnd/egl_vendor.d && \
+    cat > /usr/share/glvnd/egl_vendor.d/10_nvidia.json <<EOF
+{
+    "file_format_version" : "1.0.0",
+    "ICD" : {
+        "library_path" : "libEGL_nvidia.so.0"
+    }
+}
+EOF
+
+ENV NVIDIA_DRIVER_CAPABILITIES=all
+
+ENTRYPOINT ["ollama"]

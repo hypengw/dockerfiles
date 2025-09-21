@@ -18,7 +18,9 @@ spec:
         value: /models
       - name: OLLAMA_GPU_OVERHEAD
         value: 3300000000 # reverse 3GB for desktop usage
-    image: localhost/ollama:sycl
+      - name: OLLAMA_INTEL_GPU
+        value: 1
+    image: localhost/ollama:vulkan
     imagePullPolicy: Never
     command: ["ollama"]
     args: ["serve"]
@@ -29,6 +31,14 @@ spec:
         name: ollama-data-pvc
       - mountPath: /dev/dri
         name: dri-devices
+    # --security-opt label=disable
+    securityContext:
+      seLinuxOptions:
+        type: spc_t
+    # --device 
+    resources:
+      limits:
+        nvidia.com/gpu=all: 1
 
   - name: webui
     image: ghcr.io/open-webui/open-webui:main
