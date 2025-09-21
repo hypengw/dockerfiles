@@ -1,4 +1,4 @@
-FROM docker.io/ubuntu:25.04 AS build
+FROM docker.io/nvidia/cuda:13.0.1-cudnn-devel-ubuntu24.04 AS build
 
 RUN --mount=type=cache,target=/var/cache/apt \
     apt-get update && apt-get install -y --no-install-suggests \
@@ -21,14 +21,15 @@ RUN --mount=type=tmpfs,target=/workspace \
     -DGGML_LTO=ON \
     -DGGML_AVX=ON \
     -DGGML_AVX2=ON \
-    -DGGML_VULKAN=ON && \
+    -DGGML_CUDA=ON \
+    -DGGML_VULKAN=ON \
+    && \
     cmake --build build && \
     cmake --install build
 
-FROM docker.io/debian:sid
+FROM docker.io/nvidia/cuda:13.0.1-cudnn-runtime-ubuntu24.04
 ENV PATH="/opt/llama.cpp/bin:${PATH}"
 ENV LD_LIBRARY_PATH="/opt/llama.cpp/lib"
-
 
 COPY --from=build /opt/llama.cpp /opt/llama.cpp
 
@@ -39,16 +40,6 @@ RUN --mount=type=cache,target=/var/cache/apt \
     apt-get update && \
     apt-get install -y libvulkan1 libgomp1 curl vulkan-tools libegl1 libxext6 && \
     rm -rf /var/lib/apt/lists/*
-
-RUN mkdir -p /usr/share/glvnd/egl_vendor.d && \
-    cat > /usr/share/glvnd/egl_vendor.d/10_nvidia.json <<EOF
-{
-    "file_format_version" : "1.0.0",
-    "ICD" : {
-        "library_path" : "libEGL_nvidia.so.0"
-    }
-}
-EOF
 
 ENV NVIDIA_DRIVER_CAPABILITIES=all
 
